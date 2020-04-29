@@ -1,0 +1,39 @@
+name: CD
+
+on:
+  release:
+    types: [created]
+
+
+jobs:
+  validate-release-name:
+    name: Validate release name
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout working branch
+        uses: actions/checkout@v1
+
+      - name: Set environment variables
+        run: |
+          echo ::set-env name=BRANCH::$(git branch -r --contains ${GITHUB_SHA} | grep "")
+          echo ::set-env name=RELEASE_VERSION::$(echo ${GITHUB_REF} | sed -e "s/refs\/tags\///g" | sed -e "s/\//-/g")
+
+      - name: Validate Release Tag
+        if: "!github.event.release.prerelease"
+        run: |
+          MASTER_BRANCH_NAME='origin/master'
+          RELEASE_PREFIX='r-'
+
+          if [[ "${{ env.BRANCH }}" == *"$MASTER_BRANCH_NAME"* ]] && [[ "${{ env.RELEASE_VERSION }}" == "$RELEASE_PREFIX"* ]]; then
+            echo "Release tag validation succeeded!"
+            exit 0
+          else
+            echo "Release tag validation failed!"
+            exit 1
+          fi
+
+      - name: Validate Pre-Release Tag
+        if: "github.event.release.prerelease"
+        run: |
+          echo "Pre-release tag validation succeeded!"
+          exit 0
